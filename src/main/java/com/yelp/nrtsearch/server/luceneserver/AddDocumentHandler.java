@@ -305,7 +305,7 @@ public class AddDocumentHandler {
               CustomIndexingMetrics.updateDocValuesRequestsReceived.labels(indexName).inc();
               Term term = new Term(idFieldDef.getName(), ad_bid_id);
               // executing the partial update
-              logger.debug(
+              logger.info(
                   "running a partial update for the ad_bid_id: {} and fields {} in the thread {}",
                   ad_bid_id,
                   partialUpdateDocValueFields,
@@ -416,6 +416,7 @@ public class AddDocumentHandler {
       documents.add(rootDoc);
       CustomIndexingMetrics.addDocumentRequestsReceived.labels(indexName).inc();
       long nanoTime = System.nanoTime();
+      logger.info("Running a add Document request for the ad_bid_id: {}", rootDoc.getField("ad_bid_id").stringValue());
       shardState.writer.addDocuments(documents);
       CustomIndexingMetrics.addDocumentLatency
           .labels(indexName)
@@ -432,6 +433,8 @@ public class AddDocumentHandler {
         CustomIndexingMetrics.addDocumentRequestsReceived.labels(indexName).inc();
         long nanoTime = System.nanoTime();
         nextDoc = handleFacets(indexState, shardState, nextDoc);
+        logger.info("Running a add Document request for the ad_bid_id: {} in the thread {} ", nextDoc.getField("ad_bid_id").stringValue() ,
+            Thread.currentThread().getName() + Thread.currentThread().getId());
         shardState.writer.updateDocument(idFieldDef.getTerm(nextDoc), nextDoc);
         CustomIndexingMetrics.addDocumentLatency
             .labels(indexName)
@@ -458,6 +461,8 @@ public class AddDocumentHandler {
                     public boolean hasNext() {
                       if (!documents.isEmpty()) {
                         nextDoc = documents.poll();
+                        logger.info("running a add Document request for the ad_bid_id: {} in the thread {} ", nextDoc.getField("ad_bid_id").stringValue(),
+                            Thread.currentThread().getName() + Thread.currentThread().getId());
                         nextDoc = handleFacets(indexState, shardState, nextDoc);
                         return true;
                       } else {
@@ -473,7 +478,7 @@ public class AddDocumentHandler {
                   });
       CustomIndexingMetrics.addDocumentLatency
           .labels(indexName)
-          .set((System.nanoTime() - nanoTime));
+          .set((System.nanoTime() - nanoTime)/ documents.size());
     }
 
     private Document handleFacets(IndexState indexState, ShardState shardState, Document nextDoc) {
